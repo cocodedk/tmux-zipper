@@ -2,7 +2,7 @@ import { expect, test } from 'claude-code/testing'
 
 import { FONT } from './font'
 import { SHORTCUTS } from './shortcuts'
-import { buildTape, frame, ROWS } from './zipper'
+import { buildTape, DARK, frame, KEYS, RAIL_LINE, ROWS } from './zipper'
 
 const fromBase64 = (s: string) => (Uint8Array as unknown as { fromBase64(s: string): Uint8Array }).fromBase64(s)
 const cellsOf = (b64: string) => {
@@ -25,10 +25,12 @@ const BAND_PROPS = {
 test('all 67 shortcuts are spelled with glyphs the bulb font has', async () => {
   expect(SHORTCUTS.length).toBe(67)
   const text = SHORTCUTS.map(([keys, action]) => keys + action.toUpperCase()).join('')
-  const chars = new Set(text.replace(/…/g, '...').replace(/’/g, "'"))
+  const chars = new Set(text)
   for (const ch of chars) expect(FONT[ch]).toBeDefined()
-  // Six bulbs tall: no glyph lights a seventh.
-  for (const columns of Object.values(FONT)) for (const mask of columns) expect(mask).toBeLessThan(64)
+  for (const columns of Object.values(FONT)) {
+    for (const mask of columns) expect(mask).toBeLessThan(64) // six bulbs tall: none lights a seventh
+    expect(columns.at(-1)).toBe(0) // a dark last column keeps letters apart
+  }
 })
 
 test('a frame is a brass rail over quarter-block bulbs that stop half a bulb in, and the tape loops', async () => {
@@ -37,17 +39,16 @@ test('a frame is a brass rail over quarter-block bulbs that stop half a bulb in,
   expect(cells.length).toBe(40 * ROWS * 3)
   const cellIn = (c: Uint32Array, row: number, x: number) => Array.from(c.slice((row * 40 + x) * 3, (row * 40 + x) * 3 + 3))
   const cell = (row: number, x: number) => cellIn(cells, row, x)
-  expect(cell(0, 0)[0]).toBe(0x2550)
-  expect(cell(0, 39)[0]).toBe(0x2550)
-  expect(ROWS).toBe(4) // rail and three bulb rows; no dark row and no rail underneath
+  expect(cell(0, 0)[0]).toBe(RAIL_LINE.charCodeAt(0))
+  expect(cell(0, 39)[0]).toBe(RAIL_LINE.charCodeAt(0))
   // The C's first column lights bulbs 1-4: in the first bulb row its top is dark and its bottom lit (▄), in key white.
-  expect(cell(1, 0)).toEqual([0x2584, 0xfff1c9, 0x150f08])
+  expect(cell(1, 0)).toEqual([0x2584, KEYS, DARK])
   // Half a bulb in, that cell's left half is the C's first column (bottom lit) and its right half the second (top lit): ▞.
-  expect(cellIn(cellsOf(frame(tape, 1, 40)), 1, 0)).toEqual([0x259e, 0xfff1c9, 0x150f08])
+  expect(cellIn(cellsOf(frame(tape, 1, 40)), 1, 0)).toEqual([0x259e, KEYS, DARK])
   expect(frame(tape, 2 * tape.masks.length, 40)).toBe(frame(tape, 0, 40))
 })
 
-test('the zipper runs above the prompt only on an idle terminal', async ($, on) => {
+test('the zipper runs above the prompt on a terminal, through a turn, where it fits', async ($, on) => {
   // Stands for the engine's own band beneath the plugin: an empty box.
   on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
     const { Box } = $.ui.resolve(e)
@@ -56,6 +57,8 @@ test('the zipper runs above the prompt only on an idle terminal', async ($, on) 
   const ui = await $.ui.mount({ plugin: 'tmux-zipper', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
   expect(await ui.find({ key: 'zipper' })).toBeDefined()
   await ui.redraw({ ...BAND_PROPS, isWorking: true })
+  expect(await ui.find({ key: 'zipper' })).toBeDefined()
+  await ui.redraw({ ...BAND_PROPS, hasSurvey: true })
   expect(await ui.find({ key: 'zipper' })).toBeUndefined()
   expect(await ui.find({ key: 'engine-band' })).toBeDefined()
   await ui.redraw({ ...BAND_PROPS, maxRows: ROWS - 1 })

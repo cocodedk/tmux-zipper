@@ -1,12 +1,12 @@
 // The shortcuts the zipper runs, in order: [keys, what they do].
-// Taken from cheat-sheet.html; keep the two in step.
+// Taken from cheat-sheet.html (with ... for … and ' for ’, which the bulb font lacks); keep the two in step.
 export const SHORTCUTS: readonly (readonly [string, string])[] = [
   ["tmux", "Start tmux"],
   ["tmux new -s work", "Start a new session named work"],
   ["tmux ls", "List running sessions"],
   ["tmux a -t work", "Attach to the session named work"],
   ["tmux a", "Attach to the most recent session"],
-  ["tmux new -A -s main", "Attach to main, or create it if it isn’t there"],
+  ["tmux new -A -s main", "Attach to main, or create it if it isn't there"],
   ["tmux kill-session -t work", "Close the session named work"],
   ["tmux kill-server", "Close every session and tmux itself"],
   ["C-a d", "Detach. Everything keeps running."],
@@ -17,7 +17,7 @@ export const SHORTCUTS: readonly (readonly [string, string])[] = [
   ["C-a c", "New window"],
   ["C-a ,", "Rename this window"],
   ["C-a n / p", "Next / previous window"],
-  ["C-a 0 … 9", "Go to a window by its number"],
+  ["C-a 0 ... 9", "Go to a window by its number"],
   ["C-a w", "Pick a window from all sessions"],
   ["C-a f", "Find a window by text on its screen"],
   ["C-a &", "Close this window (asks y/n)"],
@@ -35,7 +35,7 @@ export const SHORTCUTS: readonly (readonly [string, string])[] = [
   ["C-a { / }", "Swap with the previous / next pane"],
   ["C-a !", "Move this pane into its own window"],
   ["C-a Space", "Cycle through the built-in layouts"],
-  ["C-a M-1 … M-5", "Preset layouts: side by side, stacked, big pane on top, big pane on left, grid"],
+  ["C-a M-1 ... M-5", "Preset layouts: side by side, stacked, big pane on top, big pane on left, grid"],
   ["C-a : setw synchronize-panes", "Type into every pane in this window at once; run it again to stop"],
   ["C-a C-← ↑ ↓ →", "Resize by 1 cell (keep tapping within half a second to repeat)"],
   ["C-a M-← ↑ ↓ →", "Resize by 5 cells"],
@@ -51,7 +51,7 @@ export const SHORTCUTS: readonly (readonly [string, string])[] = [
   ["q", "Leave copy mode"],
   ["C-a ]", "Paste what you copied last"],
   ["C-a =", "Pick from everything you copied"],
-  ["tmux capture-pane -pS - > out.txt", "Save this pane’s whole scrollback to out.txt"],
+  ["tmux capture-pane -pS - > out.txt", "Save this pane's whole scrollback to out.txt"],
   ["drag", "Select text; it is copied when you let go"],
   ["double / triple click", "Copy a word / a line"],
   ["Shift + drag", "Select with Ghostty instead of tmux"],

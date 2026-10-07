@@ -1,19 +1,20 @@
 // Bulb font: X11 misc-fixed 5x7 (printable ASCII) plus hand-drawn arrows and the ◆ separator.
-// Each glyph is 5 columns (m, w, M, W redrawn 6 wide to stay legible); each column a 6-bit mask, bit 0 the top bulb.
+// Each glyph is 5 columns, the last one dark (m, w, M, W redrawn 6 wide to stay legible; # $ + ◆ given a dark 6th);
+// each column a 6-bit mask, bit 0 the top bulb.
 // Six bulbs tall: glyphs that reached a seventh row lost a dark top row (g p q y , ;) or a repeated one (j Q).
 export const FONT: Readonly<Record<string, readonly number[]>> = {
   " ": [0, 0, 0, 0, 0],
   "!": [0, 0, 47, 0, 0],
   "\"": [0, 7, 0, 7, 0],
-  "#": [20, 62, 20, 62, 20],
-  "$": [4, 42, 62, 42, 16],
+  "#": [20, 62, 20, 62, 20, 0],
+  "$": [4, 42, 62, 42, 16, 0],
   "%": [19, 8, 4, 50, 0],
   "&": [20, 42, 20, 32, 0],
   "'": [0, 0, 7, 0, 0],
   "(": [0, 30, 33, 0, 0],
   ")": [0, 33, 30, 0, 0],
   "*": [0, 42, 28, 42, 0],
-  "+": [8, 8, 62, 8, 8],
+  "+": [8, 8, 62, 8, 8, 0],
   ",": [0, 32, 24, 8, 0],
   "-": [8, 8, 8, 8, 0],
   ".": [0, 48, 48, 0, 0],
@@ -101,5 +102,5 @@ export const FONT: Readonly<Record<string, readonly number[]>> = {
   "→": [8, 8, 42, 28, 0],
   "↑": [2, 63, 2, 0, 0],
   "↓": [16, 63, 16, 0, 0],
-  "◆": [8, 28, 62, 28, 8],
+  "◆": [8, 28, 62, 28, 8, 0],
 }

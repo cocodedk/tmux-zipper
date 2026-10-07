@@ -4,15 +4,15 @@ import { SHORTCUTS } from './shortcuts'
 // The ribbon, top to bottom: a brass rail with the label, then three rows of bulbs (six bulbs tall, two to a cell).
 export const ROWS = 4
 
-const KEYS = 0xfff1c9 // warm white bulbs: the keys
+export const KEYS = 0xfff1c9 // warm white bulbs: the keys
 const LIT = 0xffb000 // amber bulbs: what they do
-const DARK = 0x150f08 // the ribbon behind unlit bulbs
+export const DARK = 0x150f08 // the ribbon behind unlit bulbs
 const RAIL = 0x8a6d3b
 const DEFAULT = 0x01000000 // the terminal's own background
 // A cell is 2x2 quarters, so the tape can stop half a bulb in: indexed by top-left, top-right, bottom-left,
 // bottom-right lit (bits 3..0), drawn lit in the foreground and dark in the background.
 const QUARTERS = [0x20, 0x2597, 0x2596, 0x2584, 0x259d, 0x2590, 0x259e, 0x259f, 0x2598, 0x259a, 0x258c, 0x2599, 0x2580, 0x259c, 0x259b, 0x2588]
-const RAIL_LINE = 0x2550 // ═
+export const RAIL_LINE = '═'
 const LABEL = ' TMUX BULLETIN | PREFIX C-a ' // ASCII: every cell must be one column wide
 
 // The whole bulletin as bulb columns: a 6-bit mask (bit 0 the top bulb) and a colour per column.
@@ -22,10 +22,8 @@ export function buildTape(items: readonly (readonly [string, string])[] = SHORTC
   const masks: number[] = []
   const colors: number[] = []
   const write = (text: string, color: number) => {
-    for (const ch of text.replace(/…/g, '...').replace(/’/g, "'")) {
-      const glyph = FONT[ch] ?? FONT['?'] ?? []
-      // A glyph lit to its last column ($, #, +) gets a dark one so it does not touch the next.
-      for (const mask of glyph.at(-1) ? [...glyph, 0] : glyph) {
+    for (const ch of text) {
+      for (const mask of FONT[ch] ?? []) {
         masks.push(mask)
         colors.push(color)
       }
@@ -33,9 +31,7 @@ export function buildTape(items: readonly (readonly [string, string])[] = SHORTC
   }
   for (const [keys, action] of items) {
     write(keys, KEYS)
-    write('  ', LIT)
-    write(action.toUpperCase(), LIT)
-    write('   ◆   ', LIT)
+    write(`  ${action.toUpperCase()}   ◆   `, LIT)
   }
 
   return { masks: Uint8Array.from(masks), colors: Uint32Array.from(colors) }
@@ -50,18 +46,19 @@ export function frame(tape: Tape, half: number, columns: number): string {
     words[i + 1] = fg
     words[i + 2] = bg
   }
-  const label = columns >= LABEL.length + 4 ? LABEL : ''
+  const rail = (columns >= LABEL.length + 4 ? RAIL_LINE.repeat(2) + LABEL : '').padEnd(columns, RAIL_LINE)
   for (let x = 0; x < columns; x++) {
-    put(0, x, x >= 2 && x - 2 < label.length ? label.charCodeAt(x - 2) : RAIL_LINE, RAIL, DEFAULT)
+    put(0, x, rail.charCodeAt(x), RAIL, DEFAULT)
     // The cell's left half shows one bulb column, its right half the same one or, half a bulb in, the next.
-    const left = Math.floor((half + 2 * x) / 2) % tape.masks.length
-    const right = Math.floor((half + 2 * x + 1) / 2) % tape.masks.length
+    const left = ((half >> 1) + x) % tape.masks.length
+    const right = (left + (half & 1)) % tape.masks.length
     const maskL = tape.masks[left] ?? 0
     const maskR = tape.masks[right] ?? 0
     const color = (maskL ? tape.colors[left] : tape.colors[right]) ?? LIT
     for (let r = 0; r < ROWS - 1; r++) {
-      const bit = (mask: number, row: number) => (mask >> row) & 1
-      const quarters = (bit(maskL, 2 * r) << 3) | (bit(maskR, 2 * r) << 2) | (bit(maskL, 2 * r + 1) << 1) | bit(maskR, 2 * r + 1)
+      const l = maskL >> (2 * r)
+      const rt = maskR >> (2 * r)
+      const quarters = ((l & 1) << 3) | ((rt & 1) << 2) | (l & 2) | ((rt >> 1) & 1)
       put(r + 1, x, QUARTERS[quarters] ?? 0x20, color, DARK)
     }
   }

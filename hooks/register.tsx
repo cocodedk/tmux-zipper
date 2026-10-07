@@ -9,8 +9,9 @@ const STEP_MS = 50 // half a bulb per step: 10 bulb columns a second, in steps h
 
 export const register: Register = on => {
   const tape = buildTape()
+  const loop = 2 * tape.masks.length // the tape's length in half-bulbs
   let half = 0 // how far into the tape, in half-bulbs
-  // The band the zipper is mounted in, or null while it is dark (a turn running, a survey, too little room).
+  // The band the zipper is mounted in, or null while it is dark (switched off, a survey, too little room).
   let site: { requestId: string; columns: number } | null = null
   let refused = 0 // blits refused in a row: the band was collapsed or let go without a redraw
 
@@ -20,9 +21,12 @@ export const register: Register = on => {
       description: 'Turn the tmux zipper above the prompt on or off',
       argumentHint: '[on|off]',
     })
+    // Start where the tape would be had it run since the session began, so a reload picks up in place.
+    const { startedAt } = await $.session.usage()
+    half = Math.floor(((await $.clock.now()) - startedAt) / STEP_MS) % loop
     $.clock.every(STEP_MS, () => {
+      half = (half + 1) % loop // the tape runs while dark too, matching the clock a reload reads
       if (!site) return
-      half = (half + 1) % (2 * tape.masks.length)
       $.ui
         .blit({ requestId: site.requestId, key: KEY, cells: frame(tape, half, site.columns) })
         .then(result => {
@@ -45,8 +49,8 @@ export const register: Register = on => {
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     if (e.surface !== 'terminal') return next(e) // a desktop client's band leaves the terminal's zipper alone
-    const { isWorking, hasSurvey, maxRows, bodyColumns } = e.props
-    if (!(await read($, isOn)) || isWorking || hasSurvey || maxRows < ROWS || bodyColumns < 20) {
+    const { hasSurvey, maxRows, bodyColumns } = e.props
+    if (!(await read($, isOn)) || hasSurvey || maxRows < ROWS || bodyColumns < 20) {
       site = null
       return next(e)
     }
