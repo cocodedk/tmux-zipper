@@ -1,0 +1,349 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>tmux Cheat Sheet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Mono:wght@400;600&family=Atkinson+Hyperlegible+Next:ital,wght@0,400;0,600;1,400&family=Martian+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: the page is a tmux session. Sections are windows 0–5, and the status line pinned to the bottom is the nav.
+   Colors: Catppuccin Latte (light) and Mocha (dark), the theme already in ~/.tmux.conf. */
+:root {
+  --base: #eff1f5; --mantle: #e6e9ef; --crust: #dce0e8; --surface: #ccd0da;
+  --text: #4c4f69; --sub: #6c6f85; --blue: #1e66f5; --on-blue: #eff1f5; --mauve: #8839ef;
+  --display: "Martian Mono", ui-monospace, Menlo, monospace;
+  --body: "Atkinson Hyperlegible Next", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "Atkinson Hyperlegible Mono", ui-monospace, Menlo, Consolas, monospace;
+  --bar: 2.1rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #1e1e2e; --mantle: #181825; --crust: #11111b; --surface: #313244;
+    --text: #cdd6f4; --sub: #a6adc8; --blue: #89b4fa; --on-blue: #1e1e2e; --mauve: #cba6f7;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #1e1e2e; --mantle: #181825; --crust: #11111b; --surface: #313244;
+  --text: #cdd6f4; --sub: #a6adc8; --blue: #89b4fa; --on-blue: #1e1e2e; --mauve: #cba6f7;
+  color-scheme: dark;
+}
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+
+body {
+  background: var(--base); color: var(--text);
+  font: 400 15px/1.5 var(--body);
+  padding-inline: 16px;
+  padding-block: 0 calc(var(--bar) + 2.5rem + env(safe-area-inset-bottom, 0px));
+}
+.wrap { max-width: 74rem; margin-inline: auto; }
+
+header { display: grid; gap: 1rem; padding-block: 2.5rem 2rem; }
+h1 { margin: 0; font: 700 clamp(2.2rem, 6vw, 3.4rem)/1 var(--display); letter-spacing: -0.03em; text-wrap: balance; }
+h1 span { color: var(--sub); font-weight: 500; font-size: 0.42em; letter-spacing: 0; margin-left: 0.4em; }
+.lead { margin: 0; max-width: 62ch; color: var(--sub); }
+.legend { display: flex; flex-wrap: wrap; gap: 0.6rem 1.75rem; margin: 0; padding: 0; list-style: none; font-size: 0.9rem; }
+.legend li { display: flex; align-items: center; gap: 0.5rem; }
+
+.find { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; }
+.find label { font: 600 0.75rem var(--mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--sub); }
+#filter {
+  flex: 1 1 16rem; max-width: 26rem; min-width: 0;
+  font: 400 1rem var(--mono); color: var(--text); background: var(--mantle);
+  border: 1px solid var(--surface); border-radius: 6px; padding: 0.5rem 0.75rem;
+}
+#filter:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+#count { font: 400 0.85rem var(--mono); color: var(--sub); font-variant-numeric: tabular-nums; }
+
+main { columns: 21rem; column-gap: 3rem; }
+section { break-inside: avoid; padding-block: 0 2.25rem; scroll-margin-top: 1rem; }
+h2 { display: flex; align-items: center; gap: 0.65rem; margin: 0; padding-bottom: 0.55rem; border-bottom: 1px solid var(--surface); }
+.idx { font: 600 0.85rem/1 var(--mono); background: var(--blue); color: var(--on-blue); padding: 0.3em 0.5em; border-radius: 3px; }
+.name { font: 500 0.95rem var(--display); text-transform: uppercase; letter-spacing: 0.06em; }
+
+ul.keys-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 9.5rem 1fr; column-gap: 1rem; }
+@supports (grid-template-columns: subgrid) { ul.keys-list { grid-template-columns: fit-content(9rem) 1fr; } }
+ul.keys-list li { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: baseline; padding-block: 0.45rem; border-bottom: 1px solid var(--crust); }
+@supports not (grid-template-columns: subgrid) { ul.keys-list li { grid-template-columns: 9.5rem 1fr; column-gap: 1rem; } }
+.keys { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem; min-width: 0; }
+.act { min-width: 0; }
+.act small { color: var(--sub); font-size: 0.82rem; }
+
+kbd {
+  font: 600 0.84rem/1.3 var(--mono); color: var(--text); background: var(--mantle);
+  border: 1px solid var(--surface); border-bottom-width: 2px; border-radius: 5px;
+  padding: 0.05em 0.42em; min-width: 1.65em; text-align: center; white-space: nowrap;
+}
+kbd.p { background: var(--blue); color: var(--on-blue); border-color: var(--blue); }
+.or { color: var(--sub); font-size: 0.8rem; }
+code.cmd, code.typed { font: 600 0.86rem var(--mono); color: var(--text); }
+code.cmd::before { content: "$ "; color: var(--sub); font-weight: 400; }
+.how { font: italic 400 0.86rem var(--body); color: var(--sub); white-space: nowrap; }
+.mine { display: inline-block; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--mauve); flex: none; }
+li[data-custom] .act::before { content: ""; display: inline-block; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--mauve); margin-right: 0.5em; vertical-align: 0.08em; }
+
+#empty { font: 400 0.95rem var(--mono); color: var(--sub); padding-block: 1rem; }
+
+nav.status {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+  display: flex; align-items: stretch; min-height: var(--bar);
+  background: var(--mantle); border-top: 1px solid var(--crust);
+  font: 600 0.82rem/1 var(--mono);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.sess { display: flex; align-items: center; padding-inline: 0.85rem; background: var(--blue); color: var(--on-blue); white-space: nowrap; }
+.wins { display: flex; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.wins a { display: flex; align-items: center; padding-inline: 0.7rem; color: var(--sub); text-decoration: none; white-space: nowrap; }
+.wins a:hover { color: var(--text); }
+.wins a.on { background: var(--blue); color: var(--on-blue); }
+.wins a:focus-visible { outline: 2px solid var(--mauve); outline-offset: -2px; }
+.right { display: flex; align-items: center; gap: 0.6rem; padding-inline: 0.85rem; color: var(--mauve); white-space: nowrap; }
+.right b { color: var(--sub); font-weight: 400; }
+@media (max-width: 40rem) { .right { display: none; } ul.keys-list li { padding-block: 0.55rem; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>tmux<span>with your ~/.tmux.conf</span></h1>
+    <p class="lead">Every shortcut starts with your prefix, <strong>Ctrl+a</strong>: press it, let go, then press the next key. Keys shown without C-a are pressed on their own.</p>
+    <ul class="legend">
+      <li><kbd class="p">C-a</kbd> your prefix, Ctrl+a</li>
+      <li><kbd>C-s</kbd> Ctrl+s &nbsp; <kbd>M-w</kbd> Alt+w</li>
+      <li><span class="mine"></span> set up in your config or its plugins</li>
+    </ul>
+    <div class="find">
+      <label for="filter">Filter</label>
+      <input id="filter" type="search" placeholder="split, copy, rename…" autocomplete="off" spellcheck="false">
+      <span id="count" aria-live="polite"></span>
+    </div>
+  </header>
+
+  <main>
+    <section id="sessions">
+      <h2><span class="idx">0</span><span class="name">Sessions</span></h2>
+      <ul class="keys-list">
+        <li data-kind="command"><span class="keys"><code class="cmd">tmux</code></span><span class="act">Start tmux</span></li>
+        <li data-kind="command"><span class="keys"><code class="cmd">tmux new -s work</code></span><span class="act">Start a new session named work</span></li>
+        <li data-kind="command"><span class="keys"><code class="cmd">tmux ls</code></span><span class="act">List running sessions</span></li>
+        <li data-kind="command"><span class="keys"><code class="cmd">tmux a -t work</code></span><span class="act">Attach to the session named work</span></li>
+        <li data-kind="command"><span class="keys"><code class="cmd">tmux a</code></span><span class="act">Attach to the most recent session</span></li>
+        <li data-kind="command"><span class="keys"><code class="cmd">tmux new -A -s main</code></span><span class="act">Attach to main, or create it if it isn’t there</span></li>
+        <li data-kind="command"><span class="keys"><code class="cmd">tmux kill-session -t work</code></span><span class="act">Close the session named work</span></li>
+        <li data-kind="command"><span class="keys"><code class="cmd">tmux kill-server</code></span><span class="act">Close every session and tmux itself</span></li>
+        <li data-kind="key"><span class="keys"><kbd class="p">C-a</kbd><kbd>d</kbd></span><span class="act">Detach. Everything keeps running.</span></li>
+        <li data-kind="key"><span class="keys"><kbd class="p">C-a</kbd><kbd>s</kbd></span><span class="act">Pick a session from a list</span></li>
+        <li data-kind="key"><span class="keys"><kbd class="p">C-a</kbd><kbd>$</kbd></span><span class="act">Rename this session</span></li>
+        <li data-kind="key"><span class="keys"><kbd class="p">C-a</kbd><kbd>(</kbd><span class="or">/</span><kbd>)</kbd></span><span class="act">Previous / next session</span></li>
+        <li data-kind="key"><span class="keys"><kbd class="p">C-a</kbd><kbd>L</kbd></span><span class="act">Back to the last session you used</span></li>
+      </ul>
+    </section>
+
+    <section id="windows">
+      <h2><span class="idx">1</span><span class="name">Windows</span></h2>
+      <ul class="keys-list">
+        <li data-kind="key"><span class="keys"><kbd class="p">C-a</kbd><kbd>c</kbd></span><span class="act">New window</span></li>
+        <li data-kind="key"><span class="keys"><kbd class="p">C-a</kbd><kbd>,</kbd></span><span class="act">Rename this window</span></li>
+        <li data-kind="key"><span class="keys"><kbd class="p">C-a</kbd><kbd>n</kbd><span class="or">/</span><kbd>p</kbd></span><span class="act">Next / previous window</span></li>
+        <li data-kind="key"><span class="keys"><kbd class="p">C-a</kbd><kbd>0</kbd><span class="or">…</span><kbd>9</kbd></span><span class="act">Go to a window by its number</span></li>
+        <li data-kind="key"><span class="keys"><kbd class="p">C-a</kbd><kbd>w</kbd></span><span class="act">Pick a window from all sessions</span></li>
+        <li data-kind="key"><span class="keys"><kbd class="p">C-a</kbd><kbd>f</kbd></span><span class="act">Find a window by text on its screen</span></li>
+        <li data-kind="key"><span class="keys"><kbd class="p">C-a</kbd><kbd>&amp;</kbd></span><span class="act">Close this window <small>asks y/n</small></span></li>
+        <li data-kind="mouse" data-custom><span class="keys"><span class="how">click status bar</span></span><span class="act">Switch to the window you click</span></li>
+        <li data-kind="mouse" data-custom><span class="keys"><span class="how">scroll status bar</span></span><span class="act">Step through windows</span></li>
+      </ul>
+    </section>
+
+    <section id="panes">
+      <h2><span class="idx">2</span><span class="name">Panes</span></h2>
+      <ul class="keys-list">
+        <li data-kind="key" data-custom><span class="keys"><kbd class="p">C-a</kbd><kbd>|</kbd></span><span class="act">Split side by side, in the same folder</span></li>
+        <li data-kind="key" data-custom><span class="keys"><kbd class="p">C-a</kbd><kbd>-</kbd></span><span class="act">Split top and bottom, in the same folder</span></li>
+        <li data-kind="key" data-custom><span class="keys"><kbd class="p">C-a</kbd><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd></span><span class="act">Move to the pane left, below, above, right</span></li>
+        <li data-kind="key"><span class="keys"><kbd class="p">C-a</kbd><kbd>← ↑ ↓ →</kbd></span><span class="act">Move to the pane in that direction</span></li>
+        <li data-kind="key"><span class="keys"><kbd class="p">C-a</kbd><kbd>;</kbd></span><span class="act">Back to the previous pane</span></li>
+        <li data-kind="key"><span class="keys"><kbd class="p">C-a</kbd><kbd>o</kbd></span><span class="act">Next pane</span></li>
+        <li data-kind="key"><span class="keys"><kbd class="p">C-a</kbd><kbd>q</kbd></span><span class="act">Show pane numbers; press one to jump there</span></li>
+        <li data-kind="key"><span class="keys"><kbd class="p">C-a</kbd><kbd>z</kbd></span><span class="act">Zoom this pane to the whole window, and back</span></li>
+        <li data-kind="key"><span class="keys"><kbd class="p">C-a</kbd><kbd>x</kbd></span><span class="act">Close this pane <small>asks y/n</small></span></li>
+        <li data-kind="key"><span class="keys"><kbd class="p">C-a</kbd><kbd>{</kbd><span class="or">/</span><kbd>}</kbd></span><span class="act">Swap with the previous / next pane</span></li>
+        <li data-kind="key"><span class="keys"><kbd class="p">C-a</kbd><kbd>!</kbd></span><span class="act">Move this pane into its own window</span></li>
+        <li data-kind="key"><span class="keys"><kbd class="p">C-a</kbd><kbd>Space</kbd></span><span class="act">Cycle through the built-in layouts</span></li>
+        <li data-kind="key"><span class="keys"><kbd class="p">C-a</kbd><kbd>M-1</kbd><span class="or">…</span><kbd>M-5</kbd></span><span class="act">Preset layouts: side by side, stacked, big pane on top, big pane on left, grid</span></li>
+        <li data-kind="command"><span class="keys"><kbd class="p">C-a</kbd><kbd>:</kbd><code class="typed">setw synchronize-panes</code></span><span class="act">Type into every pane in this window at once; run it again to stop</span></li>
+        <li data-kind="key"><span class="keys"><kbd class="p">C-a</kbd><kbd>C-← ↑ ↓ →</kbd></span><span class="act">Resize by 1 cell <small>keep tapping within half a second to repeat</small></span></li>
+        <li data-kind="key"><span class="keys"><kbd class="p">C-a</kbd><kbd>M-← ↑ ↓ →</kbd></span><span class="act">Resize by 5 cells</span></li>
+        <li data-kind="mouse" data-custom><span class="keys"><span class="how">click a pane</span></span><span class="act">Make it the active pane</span></li>
+        <li data-kind="mouse" data-custom><span class="keys"><span class="how">drag a border</span></span><span class="act">Resize the panes on both sides</span></li>
+        <li data-kind="mouse" data-custom><span class="keys"><span class="how">right-click a pane</span></span><span class="act">Menu to split, zoom, swap or close</span></li>
+      </ul>
+    </section>
+
+    <section id="copy">
+      <h2><span class="idx">3</span><span class="name">Scroll &amp; copy</span></h2>
+      <ul class="keys-list">
+        <li data-kind="mouse" data-custom><span class="keys"><span class="how">scroll wheel</span></span><span class="act">Scroll back through the output</span></li>
+        <li data-kind="key"><span class="keys"><kbd class="p">C-a</kbd><kbd>[</kbd></span><span class="act">Enter copy mode; scroll with arrows, PgUp, PgDn</span></li>
+        <li data-kind="key"><span class="keys"><kbd class="p">C-a</kbd><kbd>PgUp</kbd></span><span class="act">Enter copy mode one page up</span></li>
+        <li data-kind="key"><span class="keys"><kbd>C-s</kbd><span class="or">/</span><kbd>C-r</kbd></span><span class="act">Search down / up <small>in copy mode</small></span></li>
+        <li data-kind="key"><span class="keys"><kbd>C-Space</kbd></span><span class="act">Start a selection <small>in copy mode</small></span></li>
+        <li data-kind="key"><span class="keys"><kbd>M-w</kbd></span><span class="act">Copy the selection and leave <small>in copy mode</small></span></li>
+        <li data-kind="key"><span class="keys"><kbd>q</kbd></span><span class="act">Leave copy mode</span></li>
+        <li data-kind="key"><span class="keys"><kbd class="p">C-a</kbd><kbd>]</kbd></span><span class="act">Paste what you copied last</span></li>
+        <li data-kind="key"><span class="keys"><kbd class="p">C-a</kbd><kbd>=</kbd></span><span class="act">Pick from everything you copied</span></li>
+        <li data-kind="command"><span class="keys"><code class="cmd">tmux capture-pane -pS - &gt; out.txt</code></span><span class="act">Save this pane’s whole scrollback to out.txt</span></li>
+        <li data-kind="mouse" data-custom><span class="keys"><span class="how">drag</span></span><span class="act">Select text; it is copied when you let go</span></li>
+        <li data-kind="mouse" data-custom><span class="keys"><span class="how">double / triple click</span></span><span class="act">Copy a word / a line</span></li>
+        <li data-kind="mouse"><span class="keys"><span class="how">Shift + drag</span></span><span class="act">Select with Ghostty instead of tmux</span></li>
+      </ul>
+    </section>
+
+    <section id="save">
+      <h2><span class="idx">4</span><span class="name">Save &amp; restore</span></h2>
+      <ul class="keys-list">
+        <li data-kind="key" data-custom><span class="keys"><kbd class="p">C-a</kbd><kbd>C-s</kbd></span><span class="act">Save all sessions now; do this before a reboot</span></li>
+        <li data-kind="key" data-custom><span class="keys"><kbd class="p">C-a</kbd><kbd>C-r</kbd></span><span class="act">Restore the last save</span></li>
+        <li data-kind="automatic" data-custom><span class="keys"><span class="how">every 15 min</span></span><span class="act">Saved on its own while tmux runs</span></li>
+        <li data-kind="command" data-custom><span class="keys"><code class="cmd">tmux</code></span><span class="act">After a reboot, brings back the last save</span></li>
+        <li data-kind="automatic" data-custom><span class="keys"><span class="how">on restore</span></span><span class="act">vim, nvim, less, man, htop, top and tail start again; other panes come back as a shell in the same folder</span></li>
+      </ul>
+    </section>
+
+    <section id="help">
+      <h2><span class="idx">5</span><span class="name">Help &amp; config</span></h2>
+      <ul class="keys-list">
+        <li data-kind="key"><span class="keys"><kbd class="p">C-a</kbd><kbd>?</kbd></span><span class="act">List every key binding</span></li>
+        <li data-kind="key"><span class="keys"><kbd class="p">C-a</kbd><kbd>/</kbd></span><span class="act">Press any key to see what it does</span></li>
+        <li data-kind="key"><span class="keys"><kbd class="p">C-a</kbd><kbd>:</kbd></span><span class="act">Type a tmux command</span></li>
+        <li data-kind="key" data-custom><span class="keys"><kbd class="p">C-a</kbd><kbd>C-a</kbd></span><span class="act">Send a real Ctrl+a, such as start of line in fish</span></li>
+        <li data-kind="key"><span class="keys"><kbd class="p">C-a</kbd><kbd>t</kbd></span><span class="act">Show a big clock; any key closes it</span></li>
+        <li data-kind="command"><span class="keys"><code class="cmd">tmux source ~/.tmux.conf</code></span><span class="act">Reload your config after editing it</span></li>
+        <li data-kind="key" data-custom><span class="keys"><kbd class="p">C-a</kbd><kbd>I</kbd></span><span class="act">Install plugins listed in ~/.tmux.conf</span></li>
+        <li data-kind="key" data-custom><span class="keys"><kbd class="p">C-a</kbd><kbd>U</kbd></span><span class="act">Update plugins</span></li>
+      </ul>
+    </section>
+  </main>
+  <p id="empty" hidden></p>
+</div>
+
+<nav class="status" aria-label="Sections">
+  <span class="sess">cheatsheet</span>
+  <span class="wins">
+    <a href="#sessions" class="on">0:sessions</a>
+    <a href="#windows">1:windows</a>
+    <a href="#panes">2:panes</a>
+    <a href="#copy">3:copy</a>
+    <a href="#save">4:save</a>
+    <a href="#help">5:help</a>
+  </span>
+  <span class="right">prefix C-a <b>│</b> <span id="clock">tmux 3.6</span></span>
+</nav>
+
+<script>
+(function () {
+  const $ = (s, root = document) => root.querySelector(s);
+  const $$ = (s, root = document) => Array.from(root.querySelectorAll(s));
+  const norm = (s) => s.replace(/\s+/g, ' ').trim();
+  const sections = () => $$('main section');
+  const rows = () => $$('main li[data-kind]');
+  // Keys read piece by piece, so adjacent keycaps come out as "C-a d", not "C-ad".
+  const keysOf = (li) => $$('.keys kbd, .keys code, .keys .how, .keys .or', li).map((el) => norm(el.textContent)).join(' ');
+  const textOf = (li) => `${keysOf(li)} ${norm($('.act', li).textContent)}`.toLowerCase();
+  const matches = (li, q) => q.split(' ').every((word) => textOf(li).includes(word));
+
+  // Page filter: hides rows that do not contain every typed word, and sections left empty.
+  const filter = $('#filter');
+  function applyFilter() {
+    const q = norm(filter.value).toLowerCase();
+    let shown = 0;
+    for (const sec of sections()) {
+      let n = 0;
+      for (const li of $$('li[data-kind]', sec)) { li.hidden = !!q && !matches(li, q); if (!li.hidden) n++; }
+      sec.hidden = n === 0;
+      shown += n;
+    }
+    $('#count').textContent = q ? `${shown} of ${rows().length}` : `${rows().length} shortcuts · press / to filter`;
+    $('#empty').hidden = shown > 0;
+    $('#empty').textContent = `Nothing matches “${filter.value.trim()}”. Try a shorter word.`;
+  }
+  filter.addEventListener('input', applyFilter);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === '/' && document.activeElement !== filter) { e.preventDefault(); filter.focus(); }
+    else if (e.key === 'Escape' && document.activeElement === filter) { filter.value = ''; applyFilter(); filter.blur(); }
+  });
+  applyFilter();
+
+  // Status line: highlight the section in view, like tmux marks the current window.
+  const links = $$('.wins a');
+  const mark = (id) => links.forEach((a) => a.classList.toggle('on', a.getAttribute('href') === '#' + id));
+  if ('IntersectionObserver' in window) {
+    const seen = new IntersectionObserver((entries) => {
+      for (const en of entries) if (en.isIntersecting) mark(en.target.id);
+    }, { rootMargin: '0px 0px -75% 0px' });
+    sections().forEach((s) => seen.observe(s));
+  }
+  const clock = $('#clock');
+  const tick = () => {
+    const d = new Date(), p = (n) => String(n).padStart(2, '0');
+    clock.textContent = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  };
+  tick(); setInterval(tick, 30000);
+
+  // WebMCP: typed tools for an AI agent in the visitor's browser. Silent where the API is missing.
+  // Spec (a draft): https://webmachinelearning.github.io/webmcp/
+  const given = (input) => (input && typeof input === 'object' && !Array.isArray(input) ? input : {});
+  const clip = (value, max) => Array.from(typeof value === 'string' ? value.trim() : '').slice(0, max).join('');
+  const refuse = (error, extra = {}) => ({ ok: false, error, ...extra });
+  const entry = (li) => ({
+    section: li.closest('section').id,
+    keys: keysOf(li),
+    action: norm($('.act', li).textContent),
+    kind: li.dataset.kind,
+    from_your_config: li.hasAttribute('data-custom'),
+  });
+  const READ_ONLY = { readOnlyHint: true };
+  const tools = [
+    {
+      name: 'describe',
+      title: 'Describe this page',
+      description: 'Says what this page is (a tmux shortcut cheat sheet for a config whose prefix is Ctrl+a), lists its sections with ids and shortcut counts, and returns the text in the page filter and how many shortcuts it leaves visible.',
+      inputSchema: { type: 'object', properties: {} },
+      annotations: READ_ONLY,
+      execute: async () => ({
+        page: 'tmux cheat sheet for one ~/.tmux.conf, in English',
+        prefix: 'C-a',
+        how_to_press: 'Press Ctrl+a, let go, then the key after C-a. C- means Ctrl, M- means Alt.',
+        sections: sections().map((s) => ({ id: s.id, name: norm($('.name', s).textContent), shortcuts: $$('li[data-kind]', s).length })),
+        total: rows().length,
+        from_your_config: rows().filter((li) => li.hasAttribute('data-custom')).length,
+        filter: filter.value,
+        visible: rows().filter((li) => !li.hidden).length,
+      }),
+    },
+    {
+      name: 'find_shortcuts',
+      title: 'Find shortcuts',
+      description: 'Returns the shortcuts whose keys or English action contain every word of query, optionally within one section; with no query it returns all of them. Each has section, keys (C-a is the prefix), action, kind (key, command, mouse or automatic) and from_your_config. Does not change the page filter.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: 'Words to look for, such as "split" or "copy mode". Up to 60 characters.' },
+          section: { type: 'string', enum: ['sessions', 'windows', 'panes', 'copy', 'save', 'help'], description: 'Only this section.' },
+        },
+      },
+      annotations: READ_ONLY,
+      execute: async (input) => {
+        const { query, section } = given(input);
+        const ids = sections().map((s) => s.id);
+        if (section !== undefined && section !== '' && !ids.includes(section)) return refuse(`Unknown section "${clip(String(section), 40)}".`, { sections: ids });
+        if (query !== undefined && typeof query !== 'string') return refuse('query must be a string.', { sections: ids });
+        const q = norm(clip(query, 60)).toLowerCase();
+        const found = rows().filter((li) => (!section || li.closest('section').id === section) && (!q || matches(li, q))).map(entry);
+        return { ok: true, query: q, section: section || null, count: found.length, shortcuts: found };
+      },
+    },
+  ];
+  const registry = document.modelContext;
+  if (registry && typeof registry.registerTool === 'function') {
+    for (const tool of tools) Promise.resolve().then(() => registry.registerTool(tool)).catch(() => {});
+  }
+})();
+</script>

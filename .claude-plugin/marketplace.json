@@ -1,0 +1,13 @@
+{
+  "name": "tmux-zipper",
+  "description": "tmux shortcuts on a 1928 Times Square news zipper above the Claude Code prompt",
+  "owner": {
+    "name": "Babak Bandpey"
+  },
+  "plugins": [
+    {
+      "name": "tmux-zipper",
+      "source": "./"
+    }
+  ]
+}

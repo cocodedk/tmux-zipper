@@ -1,0 +1,7 @@
+{
+  "name": "tmux-zipper",
+  "version": "0.1.0",
+  "description": "Runs your tmux shortcuts across a 1928 Times Square news zipper above the prompt while Claude is idle",
+  "author": { "name": "Babak Bandpey", "url": "https://github.com/cocodedk" },
+  "types": "./types/index.d.ts"
+}
