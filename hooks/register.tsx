@@ -5,7 +5,7 @@ import { buildTape, frame, ROWS } from './zipper'
 
 const KEY = 'zipper'
 const isOn = atom({ plugin: 'tmux-zipper', key: 'isOn' } as const, true)
-const STEP_MS = 80 // one character per step: 12.5 a second, fast enough to read as motion
+const STEP_MS = 110 // one character per step: about 9 a second, between a stutter (150) and a blur (80)
 
 export const register: Register = on => {
   const tape = buildTape()
