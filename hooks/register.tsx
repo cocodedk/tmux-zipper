@@ -12,6 +12,7 @@ import {
   ROWS,
   SPEED_KEY,
 } from './constants'
+import { BASH } from './bash'
 import { FISH } from './fish'
 import { SHORTCUTS } from './shortcuts'
 import { buildTape, frame } from './zipper'
@@ -19,7 +20,7 @@ import type { Tape } from './zipper'
 
 const isOn = atom({ plugin: 'tmux-zipper', key: 'isOn' } as const, true)
 // The cassettes /zipper <name> plays; each session starts on tmux.
-const CASSETTES = { tmux: SHORTCUTS, fish: FISH } as const
+const CASSETTES = { tmux: SHORTCUTS, fish: FISH, bash: BASH } as const
 const NAMES = Object.keys(CASSETTES).join('|')
 const USAGE = `Use /zipper to switch it, /zipper on or /zipper off, /zipper ${NAMES} to play a cassette, or /zipper speed ${MIN_SPEED}-${MAX_SPEED} (characters a second).`
 

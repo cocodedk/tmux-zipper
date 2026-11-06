@@ -1,5 +1,6 @@
 import { expect, mock, test } from 'claude-code/testing'
 
+import { BASH } from './bash'
 import { FISH } from './fish'
 import { SHORTCUTS } from './shortcuts'
 import { DARK, KEYS, ROWS } from './constants'
@@ -23,10 +24,11 @@ const BAND_PROPS = {
   view: {},
 }
 
-test('every character of both cassettes (67 tmux, 56 fish) is one the Raster takes', async ($, on) => {
+test('every character of the cassettes (67 tmux, 56 fish, 56 bash) is one the Raster takes', async ($, on) => {
   expect(SHORTCUTS.length).toBe(67)
   expect(FISH.length).toBe(56)
-  const chars = [...new Set([...SHORTCUTS, ...FISH].map(([keys, action]) => keys + action).join(''))].join('')
+  expect(BASH.length).toBe(56)
+  const chars = [...new Set([...SHORTCUTS, ...FISH, ...BASH].map(([keys, action]) => keys + action).join(''))].join('')
   const tape = buildTape([[chars, '']])
   // Beneath the zipper, switched off: draws every character once; a cell the Raster refuses skips the tree.
   on('ui.render', { component: 'AbovePrompt' }, ($, e, next) => {
@@ -103,7 +105,8 @@ test('/zipper <cassette> plays that cassette and turns the zipper on; an unknown
   expect((await $.command.run(typed('fish'))).text).toBe('Playing the fish cassette.')
   await band.redraw()
   expect(await band.find({ key: 'zipper' })).toBeDefined()
+  expect((await $.command.run(typed('bash'))).text).toBe('Playing the bash cassette.')
   expect((await $.command.run(typed('tmux'))).text).toBe('Playing the tmux cassette.')
-  for (const bad of ['jazz', 'constructor']) expect((await $.command.run(typed(bad))).text).toContain('/zipper tmux|fish to play a cassette')
+  for (const bad of ['jazz', 'constructor']) expect((await $.command.run(typed(bad))).text).toContain('/zipper tmux|fish|bash to play a cassette')
   await band.unmount()
 })
