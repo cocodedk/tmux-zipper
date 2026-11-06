@@ -1,6 +1,6 @@
 # tmux-zipper
 
-A Claude Code mod that runs tmux shortcuts above the prompt in amber bulbs, like the 1928 Motograph news zipper on Times Square. It keeps running while Claude works, and picks up where it was after a reload.
+A Claude Code mod that runs tmux shortcuts above the prompt as one line of scrolling amber text, like the 1928 Motograph news zipper on Times Square. It keeps running while Claude works, and picks up where it was after a reload.
 
 ## Install
 

@@ -5,12 +5,12 @@ import { buildTape, frame, ROWS } from './zipper'
 
 const KEY = 'zipper'
 const isOn = atom({ plugin: 'tmux-zipper', key: 'isOn' } as const, true)
-const STEP_MS = 50 // half a bulb per step: 10 bulb columns a second, in steps half a cell wide
+const STEP_MS = 150 // one character per step: about 7 characters a second
 
 export const register: Register = on => {
   const tape = buildTape()
-  const loop = 2 * tape.masks.length // the tape's length in half-bulbs
-  let half = 0 // how far into the tape, in half-bulbs
+  const loop = tape.codePoints.length // the tape's length in characters
+  let step = 0 // how far into the tape, in characters
   // The band the zipper is mounted in, or null while it is dark (switched off, a survey, too little room).
   let site: { requestId: string; columns: number } | null = null
   let refused = 0 // blits refused in a row: the band was collapsed or let go without a redraw
@@ -23,12 +23,12 @@ export const register: Register = on => {
     })
     // Start where the tape would be had it run since the session began, so a reload picks up in place.
     const { startedAt } = await $.session.usage()
-    half = Math.floor(((await $.clock.now()) - startedAt) / STEP_MS) % loop
+    step = Math.floor(((await $.clock.now()) - startedAt) / STEP_MS) % loop
     $.clock.every(STEP_MS, () => {
-      half = (half + 1) % loop // the tape runs while dark too, matching the clock a reload reads
+      step = (step + 1) % loop // the tape runs while dark too, matching the clock a reload reads
       if (!site) return
       $.ui
-        .blit({ requestId: site.requestId, key: KEY, cells: frame(tape, half, site.columns) })
+        .blit({ requestId: site.requestId, key: KEY, cells: frame(tape, step, site.columns) })
         .then(result => {
           refused = 'deny' in result ? refused + 1 : 0
           if (refused >= 20) site = null // a second of refusals; the next draw sets it again
@@ -59,6 +59,6 @@ export const register: Register = on => {
     site = { requestId: e.requestId, columns }
     refused = 0
 
-    return <Raster key={KEY} columns={columns} rows={ROWS} cells={frame(tape, half, columns)} />
+    return <Raster key={KEY} columns={columns} rows={ROWS} cells={frame(tape, step, columns)} />
   })
 }

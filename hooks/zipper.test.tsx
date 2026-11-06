@@ -1,8 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
-import { FONT } from './font'
 import { SHORTCUTS } from './shortcuts'
-import { buildTape, DARK, frame, KEYS, RAIL_LINE, ROWS } from './zipper'
+import { buildTape, DARK, frame, KEYS, ROWS } from './zipper'
 
 const fromBase64 = (s: string) => (Uint8Array as unknown as { fromBase64(s: string): Uint8Array }).fromBase64(s)
 const cellsOf = (b64: string) => {
@@ -22,30 +21,30 @@ const BAND_PROPS = {
   view: {},
 }
 
-test('all 67 shortcuts are spelled with glyphs the bulb font has', async () => {
+test('every character of the 67 shortcuts is one the Raster takes', async ($, on) => {
   expect(SHORTCUTS.length).toBe(67)
-  const text = SHORTCUTS.map(([keys, action]) => keys + action.toUpperCase()).join('')
-  const chars = new Set(text)
-  for (const ch of chars) expect(FONT[ch]).toBeDefined()
-  for (const columns of Object.values(FONT)) {
-    for (const mask of columns) expect(mask).toBeLessThan(64) // six bulbs tall: none lights a seventh
-    expect(columns.at(-1)).toBe(0) // a dark last column keeps letters apart
-  }
+  const chars = [...new Set(SHORTCUTS.map(([keys, action]) => keys + action).join(''))].join('')
+  const tape = buildTape([[chars, '']])
+  // Beneath the zipper, switched off: draws every character once; a cell the Raster refuses skips the tree.
+  on('ui.render', { component: 'AbovePrompt' }, ($, e, next) => {
+    if (e.surface !== 'terminal') return next(e)
+    const { Raster } = $.ui.resolve(e)
+    return <Raster key="every-char" columns={tape.codePoints.length} rows={ROWS} cells={frame(tape, 0, tape.codePoints.length)} />
+  })
+  await $.command.run(typed('off'))
+  const ui = await $.ui.mount({ plugin: 'tmux-zipper', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
+  expect(await ui.find({ key: 'every-char' })).toBeDefined()
+  await ui.unmount()
 })
 
-test('a frame is a brass rail over quarter-block bulbs that stop half a bulb in, and the tape loops', async () => {
+test('a frame is one row of text, keys in white, that steps a character at a time and loops', async () => {
   const tape = buildTape([['C-a d', 'Detach']])
   const cells = cellsOf(frame(tape, 0, 40))
   expect(cells.length).toBe(40 * ROWS * 3)
-  const cellIn = (c: Uint32Array, row: number, x: number) => Array.from(c.slice((row * 40 + x) * 3, (row * 40 + x) * 3 + 3))
-  const cell = (row: number, x: number) => cellIn(cells, row, x)
-  expect(cell(0, 0)[0]).toBe(RAIL_LINE.charCodeAt(0))
-  expect(cell(0, 39)[0]).toBe(RAIL_LINE.charCodeAt(0))
-  // The C's first column lights bulbs 1-4: in the first bulb row its top is dark and its bottom lit (▄), in key white.
-  expect(cell(1, 0)).toEqual([0x2584, KEYS, DARK])
-  // Half a bulb in, that cell's left half is the C's first column (bottom lit) and its right half the second (top lit): ▞.
-  expect(cellIn(cellsOf(frame(tape, 1, 40)), 1, 0)).toEqual([0x259e, KEYS, DARK])
-  expect(frame(tape, 2 * tape.masks.length, 40)).toBe(frame(tape, 0, 40))
+  const cell = (c: Uint32Array, x: number) => Array.from(c.slice(x * 3, x * 3 + 3))
+  expect(cell(cells, 0)).toEqual(['C'.charCodeAt(0), KEYS, DARK])
+  expect(cell(cellsOf(frame(tape, 1, 40)), 0)).toEqual(['-'.charCodeAt(0), KEYS, DARK])
+  expect(frame(tape, tape.codePoints.length, 40)).toBe(frame(tape, 0, 40))
 })
 
 test('the zipper runs above the prompt on a terminal, through a turn, where it fits', async ($, on) => {
@@ -61,7 +60,7 @@ test('the zipper runs above the prompt on a terminal, through a turn, where it f
   await ui.redraw({ ...BAND_PROPS, hasSurvey: true })
   expect(await ui.find({ key: 'zipper' })).toBeUndefined()
   expect(await ui.find({ key: 'engine-band' })).toBeDefined()
-  await ui.redraw({ ...BAND_PROPS, maxRows: ROWS - 1 })
+  await ui.redraw({ ...BAND_PROPS, bodyColumns: 19 })
   expect(await ui.find({ key: 'zipper' })).toBeUndefined()
   await ui.unmount()
 

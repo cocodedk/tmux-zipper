@@ -1,66 +1,41 @@
-import { FONT } from './font'
 import { SHORTCUTS } from './shortcuts'
 
-// The ribbon, top to bottom: a brass rail with the label, then three rows of bulbs (six bulbs tall, two to a cell).
-export const ROWS = 4
+// One row of ordinary terminal text scrolling past, a character a step.
+export const ROWS = 1
 
-export const KEYS = 0xfff1c9 // warm white bulbs: the keys
-const LIT = 0xffb000 // amber bulbs: what they do
-export const DARK = 0x150f08 // the ribbon behind unlit bulbs
-const RAIL = 0x8a6d3b
-const DEFAULT = 0x01000000 // the terminal's own background
-// A cell is 2x2 quarters, so the tape can stop half a bulb in: indexed by top-left, top-right, bottom-left,
-// bottom-right lit (bits 3..0), drawn lit in the foreground and dark in the background.
-const QUARTERS = [0x20, 0x2597, 0x2596, 0x2584, 0x259d, 0x2590, 0x259e, 0x259f, 0x2598, 0x259a, 0x258c, 0x2599, 0x2580, 0x259c, 0x259b, 0x2588]
-export const RAIL_LINE = '═'
-const LABEL = ' TMUX BULLETIN | PREFIX C-a ' // ASCII: every cell must be one column wide
+export const KEYS = 0xfff1c9 // warm white: the keys
+const LIT = 0xffb000 // amber: what they do
+export const DARK = 0x150f08 // the ribbon behind the text
+const SEPARATOR = '   ◆   '
 
-// The whole bulletin as bulb columns: a 6-bit mask (bit 0 the top bulb) and a colour per column.
-export type Tape = { masks: Uint8Array; colors: Uint32Array }
+// The whole bulletin as cells: a code point and a colour per character.
+export type Tape = { codePoints: Uint32Array; colors: Uint32Array }
 
 export function buildTape(items: readonly (readonly [string, string])[] = SHORTCUTS): Tape {
-  const masks: number[] = []
+  const codePoints: number[] = []
   const colors: number[] = []
   const write = (text: string, color: number) => {
     for (const ch of text) {
-      for (const mask of FONT[ch] ?? []) {
-        masks.push(mask)
-        colors.push(color)
-      }
+      codePoints.push(ch.codePointAt(0) ?? 0x20)
+      colors.push(color)
     }
   }
   for (const [keys, action] of items) {
     write(keys, KEYS)
-    write(`  ${action.toUpperCase()}   ◆   `, LIT)
+    write(`  ${action}${SEPARATOR}`, LIT)
   }
 
-  return { masks: Uint8Array.from(masks), colors: Uint32Array.from(colors) }
+  return { codePoints: Uint32Array.from(codePoints), colors: Uint32Array.from(colors) }
 }
 
-// One frame of the Raster, `columns` wide, starting `half` half-bulbs into the tape (it loops).
-export function frame(tape: Tape, half: number, columns: number): string {
+// One frame of the Raster, `columns` wide, starting `step` characters into the tape (it loops).
+export function frame(tape: Tape, step: number, columns: number): string {
   const words = new Uint32Array(columns * ROWS * 3)
-  const put = (row: number, x: number, codePoint: number, fg: number, bg: number) => {
-    const i = (row * columns + x) * 3
-    words[i] = codePoint
-    words[i + 1] = fg
-    words[i + 2] = bg
-  }
-  const rail = (columns >= LABEL.length + 4 ? RAIL_LINE.repeat(2) + LABEL : '').padEnd(columns, RAIL_LINE)
   for (let x = 0; x < columns; x++) {
-    put(0, x, rail.charCodeAt(x), RAIL, DEFAULT)
-    // The cell's left half shows one bulb column, its right half the same one or, half a bulb in, the next.
-    const left = ((half >> 1) + x) % tape.masks.length
-    const right = (left + (half & 1)) % tape.masks.length
-    const maskL = tape.masks[left] ?? 0
-    const maskR = tape.masks[right] ?? 0
-    const color = (maskL ? tape.colors[left] : tape.colors[right]) ?? LIT
-    for (let r = 0; r < ROWS - 1; r++) {
-      const l = maskL >> (2 * r)
-      const rt = maskR >> (2 * r)
-      const quarters = ((l & 1) << 3) | ((rt & 1) << 2) | (l & 2) | ((rt >> 1) & 1)
-      put(r + 1, x, QUARTERS[quarters] ?? 0x20, color, DARK)
-    }
+    const i = (step + x) % tape.codePoints.length
+    words[x * 3] = tape.codePoints[i] ?? 0x20
+    words[x * 3 + 1] = tape.colors[i] ?? LIT
+    words[x * 3 + 2] = DARK
   }
 
   // The environment has Uint8Array.prototype.toBase64; the es2023 lib does not declare it.

@@ -1,5 +1,5 @@
 // The shortcuts the zipper runs, in order: [keys, what they do].
-// Taken from cheat-sheet.html (with ... for … and ' for ’, which the bulb font lacks); keep the two in step.
+// Taken from cheat-sheet.html (with ... for … and ' for ’); keep the two in step.
 export const SHORTCUTS: readonly (readonly [string, string])[] = [
   ["tmux", "Start tmux"],
   ["tmux new -s work", "Start a new session named work"],
