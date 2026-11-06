@@ -18,3 +18,8 @@ export const SPEED_KEY = 'speed'
 
 // How long blits may be refused in a row before the band counts as gone (the next draw sets it again).
 export const GIVE_UP_MS = 1000
+
+// The one cassette /zipper update can refresh, from the running Claude Code's own commands; also its $.store key.
+export const LIVE_CASSETTE = 'claude'
+// The command source that marks Claude Code's own slash commands.
+export const BUILTIN = 'builtin'

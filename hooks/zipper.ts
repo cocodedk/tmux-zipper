@@ -3,8 +3,10 @@ import { SHORTCUTS } from './shortcuts'
 
 // The whole bulletin as cells: a code point and a colour per character.
 export type Tape = { codePoints: Uint32Array; colors: Uint32Array }
+// A cassette: [keys, what they do] pairs, played in order.
+export type Cassette = readonly (readonly [string, string])[]
 
-export function buildTape(items: readonly (readonly [string, string])[] = SHORTCUTS): Tape {
+export function buildTape(items: Cassette = SHORTCUTS): Tape {
   const codePoints: number[] = []
   const colors: number[] = []
   const write = (text: string, color: number) => {

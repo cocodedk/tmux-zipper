@@ -1,10 +1,13 @@
 import { atom, read, update } from 'claude-code'
 import type { CoreEngineInterface, Register, Timer } from 'claude-code'
 
+import { BASH } from './bash'
+import { builtins, CLAUDE } from './claude'
 import {
   DEFAULT_SPEED,
   GIVE_UP_MS,
   KEY,
+  LIVE_CASSETTE,
   MAX_COLUMNS,
   MAX_SPEED,
   MIN_COLUMNS,
@@ -12,17 +15,17 @@ import {
   ROWS,
   SPEED_KEY,
 } from './constants'
-import { BASH } from './bash'
 import { FISH } from './fish'
 import { SHORTCUTS } from './shortcuts'
 import { buildTape, frame } from './zipper'
-import type { Tape } from './zipper'
+import type { Cassette, Tape } from './zipper'
 
 const isOn = atom({ plugin: 'tmux-zipper', key: 'isOn' } as const, true)
 // The cassettes /zipper <name> plays; each session starts on tmux.
-const CASSETTES = { tmux: SHORTCUTS, fish: FISH, bash: BASH } as const
+const CASSETTES = { tmux: SHORTCUTS, fish: FISH, bash: BASH, claude: CLAUDE } as const
+type Name = keyof typeof CASSETTES
 const NAMES = Object.keys(CASSETTES).join('|')
-const USAGE = `Use /zipper to switch it, /zipper on or /zipper off, /zipper ${NAMES} to play a cassette, /zipper list to list them, or /zipper speed ${MIN_SPEED}-${MAX_SPEED} (characters a second).`
+const USAGE = `Use /zipper to switch it, /zipper on or /zipper off, /zipper ${NAMES} to play a cassette, /zipper list to list them, /zipper update ${LIVE_CASSETTE} to refresh that one from this Claude Code, or /zipper speed ${MIN_SPEED}-${MAX_SPEED} (characters a second).`
 
 // The zipper's running state, made fresh by each register.
 type Zipper = {
@@ -39,6 +42,19 @@ const speedText = (speed: number) => `Zipper speed ${speed} characters a second.
 async function speedOf($: Pick<CoreEngineInterface, 'store'>): Promise<number> {
   const speed = await $.store.get(SPEED_KEY)
   return typeof speed === 'number' ? speed : DEFAULT_SPEED
+}
+
+// The live cassette as an earlier /zipper update left it, if it did.
+async function storedLive($: Pick<CoreEngineInterface, 'store'>): Promise<Cassette | undefined> {
+  const stored = await $.store.get(LIVE_CASSETTE)
+  return Array.isArray(stored) && stored.length > 0 ? (stored as Cassette) : undefined
+}
+
+// Puts a cassette in from the start, the live one as /zipper update last left it, and turns the zipper on.
+async function play($: Parameters<typeof update>[0] & Pick<CoreEngineInterface, 'store'>, z: Zipper, name: Name): Promise<void> {
+  z.tape = buildTape((name === LIVE_CASSETTE && (await storedLive($))) || CASSETTES[name])
+  z.step = 0
+  await update($, isOn, () => true)
 }
 
 // (Re)starts the tape at `speed` characters a second.
@@ -70,8 +86,8 @@ export const register: Register = on => {
       $.clock.now(),
       $.command.register({
         name: 'zipper',
-        description: 'Turn the zipper above the prompt on or off, play a cassette, or set its speed',
-        argumentHint: `[on|off|list|${NAMES}|speed <n>]`,
+        description: 'Turn the zipper above the prompt on or off, play or update a cassette, or set its speed',
+        argumentHint: `[on|off|list|${NAMES}|update ${LIVE_CASSETTE}|speed <n>]`,
       }),
     ])
     z.step = Math.floor(((now - startedAt) * speed) / 1000) % z.tape.codePoints.length
@@ -81,9 +97,9 @@ export const register: Register = on => {
   })
 
   on('command.run', { command: 'zipper' }, async ($, e) => {
-    const [arg = '', value] = e.args.trim().toLowerCase().split(/\s+/)
+    const [arg = '', value = ''] = e.args.trim().toLowerCase().split(/\s+/)
     if (arg === 'speed') {
-      if (value === undefined) return { text: speedText(await speedOf($)) }
+      if (value === '') return { text: speedText(await speedOf($)) }
       const speed = Number(value)
       if (!(speed >= MIN_SPEED && speed <= MAX_SPEED)) return { text: USAGE }
       await $.store.set(SPEED_KEY, speed)
@@ -91,10 +107,19 @@ export const register: Register = on => {
       return { text: speedText(speed) }
     }
     if (arg === 'list') return { text: `Cassettes: ${Object.keys(CASSETTES).join(', ')}.` }
+    if (arg === 'update') {
+      if (value !== LIVE_CASSETTE) {
+        const text = Object.hasOwn(CASSETTES, value) ? `The ${value} cassette has no live source; it updates with the plugin.` : USAGE
+        return { text }
+      }
+      const cassette = await builtins($)
+      if (cassette.length === 0) return { text: `Found no built-in commands; the ${value} cassette is unchanged.` }
+      await $.store.set(LIVE_CASSETTE, cassette)
+      await play($, z, LIVE_CASSETTE)
+      return { text: `Updated the ${value} cassette to ${cassette.length} commands; playing it.` }
+    }
     if (Object.hasOwn(CASSETTES, arg)) {
-      z.tape = buildTape(CASSETTES[arg as keyof typeof CASSETTES])
-      z.step = 0
-      await update($, isOn, () => true)
+      await play($, z, arg as Name)
       return { text: `Playing the ${arg} cassette.` }
     }
     if (arg !== '' && arg !== 'on' && arg !== 'off') return { text: USAGE }

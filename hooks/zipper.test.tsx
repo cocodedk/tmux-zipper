@@ -1,6 +1,7 @@
 import { expect, mock, test } from 'claude-code/testing'
 
 import { BASH } from './bash'
+import { CLAUDE } from './claude'
 import { FISH } from './fish'
 import { SHORTCUTS } from './shortcuts'
 import { DARK, KEYS, ROWS } from './constants'
@@ -24,11 +25,12 @@ const BAND_PROPS = {
   view: {},
 }
 
-test('every character of the cassettes (67 tmux, 56 fish, 56 bash) is one the Raster takes', async ($, on) => {
+test('every character of the cassettes (67 tmux, 56 fish, 56 bash, 55 claude) is one the Raster takes', async ($, on) => {
   expect(SHORTCUTS.length).toBe(67)
   expect(FISH.length).toBe(56)
   expect(BASH.length).toBe(56)
-  const chars = [...new Set([...SHORTCUTS, ...FISH, ...BASH].map(([keys, action]) => keys + action).join(''))].join('')
+  expect(CLAUDE.length).toBe(55)
+  const chars = [...new Set([...SHORTCUTS, ...FISH, ...BASH, ...CLAUDE].map(([keys, action]) => keys + action).join(''))].join('')
   const tape = buildTape([[chars, '']])
   // Beneath the zipper, switched off: draws every character once; a cell the Raster refuses skips the tree.
   on('ui.render', { component: 'AbovePrompt' }, ($, e, next) => {
@@ -100,14 +102,48 @@ test('a speed set in an earlier session is the one the zipper starts with', asyn
 })
 
 test('/zipper <cassette> plays that cassette and turns the zipper on; an unknown name lists the cassettes', async ($, on) => {
+  mock.store(on)
   const band = await $.ui.mount({ plugin: 'tmux-zipper', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
   await $.command.run(typed('off'))
   expect((await $.command.run(typed('fish'))).text).toBe('Playing the fish cassette.')
   await band.redraw()
   expect(await band.find({ key: 'zipper' })).toBeDefined()
   expect((await $.command.run(typed('bash'))).text).toBe('Playing the bash cassette.')
-  expect((await $.command.run(typed('list'))).text).toBe('Cassettes: tmux, fish, bash.')
+  expect((await $.command.run(typed('claude'))).text).toBe('Playing the claude cassette.')
+  expect((await $.command.run(typed('list'))).text).toBe('Cassettes: tmux, fish, bash, claude.')
   expect((await $.command.run(typed('tmux'))).text).toBe('Playing the tmux cassette.')
-  for (const bad of ['jazz', 'constructor']) expect((await $.command.run(typed(bad))).text).toContain('/zipper tmux|fish|bash to play a cassette')
+  for (const bad of ['jazz', 'constructor']) expect((await $.command.run(typed(bad))).text).toContain('/zipper tmux|fish|bash|claude to play a cassette')
+  await band.unmount()
+})
+
+// The text the mounted zipper shows, read from its Raster's cells.
+const shown = async (band: { find: (q: { key: string }) => Promise<{ props: Record<string, unknown> } | undefined> }) => {
+  const cells = cellsOf(String((await band.find({ key: 'zipper' }))?.props.cells))
+  return String.fromCodePoint(...cells.filter((_, i) => i % 3 === 0))
+}
+
+test('/zipper update claude rebuilds that cassette from the built-in commands, made plain; the others have no live source', async ($, on) => {
+  mock.store(on)
+  on('command.list', async () => ({
+    value: [
+      { name: 'clear', description: 'Start fresh … it’s “new”\n中', source: 'builtin' as const },
+      { name: 'zipper', description: 'A plugin command', source: 'plugin' as const },
+    ],
+  }))
+  const band = await $.ui.mount({ plugin: 'tmux-zipper', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
+  expect((await $.command.run(typed('update claude'))).text).toBe('Updated the claude cassette to 1 commands; playing it.')
+  await band.redraw()
+  expect(await shown(band)).toContain(`/clear  Start fresh ... it's "new" ?`)
+  expect((await $.command.run(typed('update fish'))).text).toBe('The fish cassette has no live source; it updates with the plugin.')
+  for (const bad of ['update', 'update jazz']) expect((await $.command.run(typed(bad))).text).toContain('/zipper update claude to refresh')
+  await band.unmount()
+})
+
+test('a claude cassette updated in an earlier session is the one /zipper claude plays', async ($, on) => {
+  mock.store(on, { claude: [['/old', 'Kept from before']] })
+  const band = await $.ui.mount({ plugin: 'tmux-zipper', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
+  await $.command.run(typed('claude'))
+  await band.redraw()
+  expect(await shown(band)).toContain('/old  Kept from before')
   await band.unmount()
 })

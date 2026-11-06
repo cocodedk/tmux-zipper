@@ -16,7 +16,7 @@ Answer `y` to add the marketplace, then pick a scope.
 
 - `/zipper` turns it on or off; `/zipper on` and `/zipper off` set it directly.
 - `/zipper speed 4` sets the speed in characters a second (0.5 to 20, default 2.3), kept across sessions; `/zipper speed` shows it.
-- `/zipper fish` plays the fish shell cassette, `/zipper bash` the bash one, `/zipper tmux` the tmux one (each session starts on tmux); either turns the zipper on. `/zipper list` lists the cassettes.
+- `/zipper fish` plays the fish shell cassette, `/zipper bash` the bash one, `/zipper claude` Claude Code's own slash commands, `/zipper tmux` the tmux one (each session starts on tmux); either turns the zipper on. `/zipper list` lists the cassettes. `/zipper update claude` rebuilds the claude cassette from the commands your Claude Code has now, kept across sessions.
 - `ctrl+x ctrl+a`, or the `[-]` beside it, collapses the band.
 
 The 67 shortcuts in `hooks/shortcuts.ts` assume a prefix of `C-a` and the tmux-resurrect and tmux-continuum plugins. `cheat-sheet.html` is the same list as a page; keep the two in step.
