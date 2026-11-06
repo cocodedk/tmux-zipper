@@ -111,6 +111,7 @@ test('/zipper <cassette> plays that cassette and turns the zipper on; an unknown
   expect((await $.command.run(typed('bash'))).text).toBe('Playing the bash cassette.')
   expect((await $.command.run(typed('claude'))).text).toBe('Playing the claude cassette.')
   expect((await $.command.run(typed('list'))).text).toBe('Cassettes: tmux, fish, bash, claude.')
+  expect((await $.command.run(typed('help'))).text).toContain('/zipper speed 0.5-20')
   expect((await $.command.run(typed('tmux'))).text).toBe('Playing the tmux cassette.')
   for (const bad of ['jazz', 'constructor']) expect((await $.command.run(typed(bad))).text).toContain('/zipper tmux|fish|bash|claude to play a cassette')
   await band.unmount()

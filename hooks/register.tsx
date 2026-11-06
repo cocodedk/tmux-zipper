@@ -87,7 +87,7 @@ export const register: Register = on => {
       $.command.register({
         name: 'zipper',
         description: 'Turn the zipper above the prompt on or off, play or update a cassette, or set its speed',
-        argumentHint: `[on|off|list|${NAMES}|update ${LIVE_CASSETTE}|speed <n>]`,
+        argumentHint: `[on|off|help|list|${NAMES}|update ${LIVE_CASSETTE}|speed <n>]`,
       }),
     ])
     z.step = Math.floor(((now - startedAt) * speed) / 1000) % z.tape.codePoints.length
@@ -106,6 +106,7 @@ export const register: Register = on => {
       run($, z, speed)
       return { text: speedText(speed) }
     }
+    if (arg === 'help') return { text: USAGE }
     if (arg === 'list') return { text: `Cassettes: ${Object.keys(CASSETTES).join(', ')}.` }
     if (arg === 'update') {
       if (value !== LIVE_CASSETTE) {
