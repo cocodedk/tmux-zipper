@@ -1,7 +1,8 @@
 import { expect, mock, test } from 'claude-code/testing'
 
 import { SHORTCUTS } from './shortcuts'
-import { buildTape, DARK, frame, KEYS, ROWS } from './zipper'
+import { DARK, KEYS, ROWS } from './constants'
+import { buildTape, frame } from './zipper'
 
 const fromBase64 = (s: string) => (Uint8Array as unknown as { fromBase64(s: string): Uint8Array }).fromBase64(s)
 const cellsOf = (b64: string) => {
