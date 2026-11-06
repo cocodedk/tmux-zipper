@@ -1,4 +1,4 @@
-import { expect, test } from 'claude-code/testing'
+import { expect, mock, test } from 'claude-code/testing'
 
 import { SHORTCUTS } from './shortcuts'
 import { buildTape, DARK, frame, KEYS, ROWS } from './zipper'
@@ -77,4 +77,19 @@ test('the zipper runs above the prompt on a terminal, through a turn, where it f
   const desk = await $.ui.mount({ plugin: 'tmux-zipper', surface: 'desktop', component: 'AbovePrompt', props: BAND_PROPS })
   expect(await desk.find({ key: 'zipper' })).toBeUndefined()
   await desk.unmount()
+})
+
+test('/zipper speed sets how many characters a second, keeps it in the store, and refuses what is out of range', async ($, on) => {
+  mock.store(on)
+  expect((await $.command.run(typed('speed'))).text).toBe('Zipper speed 2.3 characters a second.')
+  expect((await $.command.run(typed('speed 4'))).text).toBe('Zipper speed 4 characters a second.')
+  expect((await $.command.run(typed('speed'))).text).toBe('Zipper speed 4 characters a second.')
+  for (const bad of ['speed 0.1', 'speed 100', 'speed fast', 'faster']) {
+    expect((await $.command.run(typed(bad))).text).toContain('/zipper speed 0.5-20')
+  }
+})
+
+test('a speed set in an earlier session is the one the zipper starts with', async ($, on) => {
+  mock.store(on, { speed: 5 })
+  expect((await $.command.run(typed('speed'))).text).toBe('Zipper speed 5 characters a second.')
 })
