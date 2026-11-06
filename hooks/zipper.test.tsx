@@ -1,5 +1,6 @@
 import { expect, mock, test } from 'claude-code/testing'
 
+import { FISH } from './fish'
 import { SHORTCUTS } from './shortcuts'
 import { DARK, KEYS, ROWS } from './constants'
 import { buildTape, frame } from './zipper'
@@ -22,9 +23,10 @@ const BAND_PROPS = {
   view: {},
 }
 
-test('every character of the 67 shortcuts is one the Raster takes', async ($, on) => {
+test('every character of both cassettes (67 tmux, 56 fish) is one the Raster takes', async ($, on) => {
   expect(SHORTCUTS.length).toBe(67)
-  const chars = [...new Set(SHORTCUTS.map(([keys, action]) => keys + action).join(''))].join('')
+  expect(FISH.length).toBe(56)
+  const chars = [...new Set([...SHORTCUTS, ...FISH].map(([keys, action]) => keys + action).join(''))].join('')
   const tape = buildTape([[chars, '']])
   // Beneath the zipper, switched off: draws every character once; a cell the Raster refuses skips the tree.
   on('ui.render', { component: 'AbovePrompt' }, ($, e, next) => {
@@ -93,4 +95,15 @@ test('/zipper speed sets how many characters a second, keeps it in the store, an
 test('a speed set in an earlier session is the one the zipper starts with', async ($, on) => {
   mock.store(on, { speed: 5 })
   expect((await $.command.run(typed('speed'))).text).toBe('Zipper speed 5 characters a second.')
+})
+
+test('/zipper <cassette> plays that cassette and turns the zipper on; an unknown name lists the cassettes', async ($, on) => {
+  const band = await $.ui.mount({ plugin: 'tmux-zipper', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
+  await $.command.run(typed('off'))
+  expect((await $.command.run(typed('fish'))).text).toBe('Playing the fish cassette.')
+  await band.redraw()
+  expect(await band.find({ key: 'zipper' })).toBeDefined()
+  expect((await $.command.run(typed('tmux'))).text).toBe('Playing the tmux cassette.')
+  for (const bad of ['jazz', 'constructor']) expect((await $.command.run(typed(bad))).text).toContain('/zipper tmux|fish to play a cassette')
+  await band.unmount()
 })

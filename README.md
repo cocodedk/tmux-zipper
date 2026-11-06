@@ -16,6 +16,7 @@ Answer `y` to add the marketplace, then pick a scope.
 
 - `/zipper` turns it on or off; `/zipper on` and `/zipper off` set it directly.
 - `/zipper speed 4` sets the speed in characters a second (0.5 to 20, default 2.3), kept across sessions; `/zipper speed` shows it.
+- `/zipper fish` plays the fish shell cassette, `/zipper tmux` the tmux one (each session starts on tmux); either turns the zipper on.
 - `ctrl+x ctrl+a`, or the `[-]` beside it, collapses the band.
 
 The 67 shortcuts in `hooks/shortcuts.ts` assume a prefix of `C-a` and the tmux-resurrect and tmux-continuum plugins. `cheat-sheet.html` is the same list as a page; keep the two in step.

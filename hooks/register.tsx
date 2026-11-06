@@ -12,15 +12,20 @@ import {
   ROWS,
   SPEED_KEY,
 } from './constants'
+import { FISH } from './fish'
+import { SHORTCUTS } from './shortcuts'
 import { buildTape, frame } from './zipper'
+import type { Tape } from './zipper'
 
 const isOn = atom({ plugin: 'tmux-zipper', key: 'isOn' } as const, true)
-const USAGE = `Use /zipper to switch it, /zipper on or /zipper off, or /zipper speed ${MIN_SPEED}-${MAX_SPEED} (characters a second).`
-const TAPE = buildTape()
-const LENGTH = TAPE.codePoints.length
+// The cassettes /zipper <name> plays; each session starts on tmux.
+const CASSETTES = { tmux: SHORTCUTS, fish: FISH } as const
+const NAMES = Object.keys(CASSETTES).join('|')
+const USAGE = `Use /zipper to switch it, /zipper on or /zipper off, /zipper ${NAMES} to play a cassette, or /zipper speed ${MIN_SPEED}-${MAX_SPEED} (characters a second).`
 
 // The zipper's running state, made fresh by each register.
 type Zipper = {
+  tape: Tape // the cassette playing
   step: number // how far into the tape, in characters
   // The band the zipper is mounted in, or null while it is dark (switched off, a survey, too little room).
   site: { requestId: string; columns: number } | null
@@ -40,11 +45,11 @@ function run($: Pick<CoreEngineInterface, 'clock' | 'ui'>, z: Zipper, speed: num
   const giveUpAfter = Math.max(1, Math.ceil((GIVE_UP_MS * speed) / 1000)) // GIVE_UP_MS in ticks at this speed
   z.timer?.cancel()
   z.timer = $.clock.every(1000 / speed, () => {
-    z.step = (z.step + 1) % LENGTH // the tape runs while dark too, matching the clock a reload reads
+    z.step = (z.step + 1) % z.tape.codePoints.length // the tape runs while dark too, matching the clock a reload reads
     const site = z.site
     if (!site) return
     $.ui
-      .blit({ requestId: site.requestId, key: KEY, cells: frame(TAPE, z.step, site.columns) })
+      .blit({ requestId: site.requestId, key: KEY, cells: frame(z.tape, z.step, site.columns) })
       .then(result => {
         z.refused = 'deny' in result ? z.refused + 1 : 0
         if (z.refused >= giveUpAfter) z.site = null
@@ -54,7 +59,7 @@ function run($: Pick<CoreEngineInterface, 'clock' | 'ui'>, z: Zipper, speed: num
 }
 
 export const register: Register = on => {
-  const z: Zipper = { step: 0, site: null, refused: 0, timer: null }
+  const z: Zipper = { tape: buildTape(CASSETTES.tmux), step: 0, site: null, refused: 0, timer: null }
 
   on('session.start', async ($, e, next) => {
     // Start where the tape would be had it run since the session began, so a reload picks up in place.
@@ -64,11 +69,11 @@ export const register: Register = on => {
       $.clock.now(),
       $.command.register({
         name: 'zipper',
-        description: 'Turn the tmux zipper above the prompt on or off, or set its speed',
-        argumentHint: '[on|off|speed <n>]',
+        description: 'Turn the zipper above the prompt on or off, play a cassette, or set its speed',
+        argumentHint: `[on|off|${NAMES}|speed <n>]`,
       }),
     ])
-    z.step = Math.floor(((now - startedAt) * speed) / 1000) % LENGTH
+    z.step = Math.floor(((now - startedAt) * speed) / 1000) % z.tape.codePoints.length
     run($, z, speed)
 
     return next(e)
@@ -83,6 +88,12 @@ export const register: Register = on => {
       await $.store.set(SPEED_KEY, speed)
       run($, z, speed)
       return { text: speedText(speed) }
+    }
+    if (Object.hasOwn(CASSETTES, arg)) {
+      z.tape = buildTape(CASSETTES[arg as keyof typeof CASSETTES])
+      z.step = 0
+      await update($, isOn, () => true)
+      return { text: `Playing the ${arg} cassette.` }
     }
     if (arg !== '' && arg !== 'on' && arg !== 'off') return { text: USAGE }
     const now = await update($, isOn, was => (arg === '' ? !was : arg === 'on'))
@@ -102,6 +113,6 @@ export const register: Register = on => {
     z.site = { requestId: e.requestId, columns }
     z.refused = 0
 
-    return <Raster key={KEY} columns={columns} rows={ROWS} cells={frame(TAPE, z.step, columns)} />
+    return <Raster key={KEY} columns={columns} rows={ROWS} cells={frame(z.tape, z.step, columns)} />
   })
 }
