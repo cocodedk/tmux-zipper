@@ -106,6 +106,7 @@ test('/zipper <cassette> plays that cassette and turns the zipper on; an unknown
   await band.redraw()
   expect(await band.find({ key: 'zipper' })).toBeDefined()
   expect((await $.command.run(typed('bash'))).text).toBe('Playing the bash cassette.')
+  expect((await $.command.run(typed('list'))).text).toBe('Cassettes: tmux, fish, bash.')
   expect((await $.command.run(typed('tmux'))).text).toBe('Playing the tmux cassette.')
   for (const bad of ['jazz', 'constructor']) expect((await $.command.run(typed(bad))).text).toContain('/zipper tmux|fish|bash to play a cassette')
   await band.unmount()

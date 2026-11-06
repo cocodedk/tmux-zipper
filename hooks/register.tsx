@@ -22,7 +22,7 @@ const isOn = atom({ plugin: 'tmux-zipper', key: 'isOn' } as const, true)
 // The cassettes /zipper <name> plays; each session starts on tmux.
 const CASSETTES = { tmux: SHORTCUTS, fish: FISH, bash: BASH } as const
 const NAMES = Object.keys(CASSETTES).join('|')
-const USAGE = `Use /zipper to switch it, /zipper on or /zipper off, /zipper ${NAMES} to play a cassette, or /zipper speed ${MIN_SPEED}-${MAX_SPEED} (characters a second).`
+const USAGE = `Use /zipper to switch it, /zipper on or /zipper off, /zipper ${NAMES} to play a cassette, /zipper list to list them, or /zipper speed ${MIN_SPEED}-${MAX_SPEED} (characters a second).`
 
 // The zipper's running state, made fresh by each register.
 type Zipper = {
@@ -71,7 +71,7 @@ export const register: Register = on => {
       $.command.register({
         name: 'zipper',
         description: 'Turn the zipper above the prompt on or off, play a cassette, or set its speed',
-        argumentHint: `[on|off|${NAMES}|speed <n>]`,
+        argumentHint: `[on|off|list|${NAMES}|speed <n>]`,
       }),
     ])
     z.step = Math.floor(((now - startedAt) * speed) / 1000) % z.tape.codePoints.length
@@ -90,6 +90,7 @@ export const register: Register = on => {
       run($, z, speed)
       return { text: speedText(speed) }
     }
+    if (arg === 'list') return { text: `Cassettes: ${Object.keys(CASSETTES).join(', ')}.` }
     if (Object.hasOwn(CASSETTES, arg)) {
       z.tape = buildTape(CASSETTES[arg as keyof typeof CASSETTES])
       z.step = 0
